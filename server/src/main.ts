@@ -1,9 +1,3 @@
-import { Request, Response } from "express";
-
-app.get("/", (req: Request, res: Response) => {
-  res.send("Welcome to Wild Series !");
-});
-
 // Load environment variables from .env file
 import "dotenv/config";
 
