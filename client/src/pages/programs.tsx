@@ -5,17 +5,12 @@ interface Program {
   poster: string;
 }
 const program = () => {
-  const [programs, setPrograms] = useState<Program[]>([]); // Ajout du state
+  const [programs, setPrograms] = useState([] as Program[]); // Ajout du state
   useEffect(() => {
-    fetch("http://localhost:3310/api/programs")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setPrograms(data); // Stockage des données dans le state
+    fetch(`${import.meta.env.VITE_API_URL}/api/categories`)
+      .then((response) => response.json())
+      .then((data: Program[]) => {
+        setPrograms(data);
       });
   }, []);
   return (

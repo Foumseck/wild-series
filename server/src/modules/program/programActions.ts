@@ -26,24 +26,113 @@ const programs = [
 // Declare the action
 
 import type { RequestHandler } from "express";
+import joi from "joi";
 
-const browse: RequestHandler = async (req, res) => {
-    const programsFromDB = await programRepository.readAll(); 
-    res.json(programsFromDB);  
-  };
-  
-const read: RequestHandler = (req, res) => {
-  const parsedId = Number.parseInt(req.params.id);
+const progSchema = joi.object({
+  title: joi.string().max(255).required(),
+  synopsis: joi.string().required(),
+  poster: joi.string().max(4).required(),
+  country: joi.string().max(255).required(),
+  year: joi.string().max(4).required(),
+});
 
-  const program = programs.find((p) => p.id === parsedId);
-
-  if (program != null) {
-    res.json(program);
+const validate: RequestHandler = (req, res, next) => {
+  const { error } = progSchema.validate(req.body, { abortEarly: false });
+  if (error == null) {
+    next();
   } else {
-    res.sendStatus(404);
+    res.status(400).json({ validationErrors: error.details });
   }
 };
 
-// Export it to import it somewhere else
+const browse: RequestHandler = async (req, res, next) => {
+  try {
+    // Fetch all categories
+    const categories = await programRepository.readAll();
 
-export default { browse, read };
+    // Respond with the categories in JSON format
+    res.json(categories);
+  } catch (err) {
+    // Pass any errors to the error-handling middleware
+    next(err);
+  }
+};
+
+const read: RequestHandler = async (req, res, next) => {
+  try {
+    // Fetch a specific category based on the provided ID
+    const categoryId = Number(req.params.id);
+    const category = await programRepository.read(categoryId);
+
+    // If the category is not found, respond with HTTP 404 (Not Found)
+    // Otherwise, respond with the category in JSON format
+    if (category == null) {
+      res.sendStatus(404);
+    } else {
+      res.json(category);
+    }
+  } catch (err) {
+    // Pass any errors to the error-handling middleware
+    next(err);
+  }
+};
+
+const edit: RequestHandler = async (req, res, next) => {
+  try {
+    // Update a specific category based on the provided ID
+    const category = {
+      id: Number(req.params.id),
+      name: req.body.name,
+    };
+
+    const affectedRows = await programRepository.update(category);
+
+    // If the category is not found, respond with HTTP 404 (Not Found)
+    // Otherwise, respond with the category in JSON format
+    if (affectedRows === 0) {
+      res.sendStatus(404);
+    } else {
+      res.sendStatus(204);
+    }
+  } catch (err) {
+    // Pass any errors to the error-handling middleware
+    next(err);
+  }
+};
+
+const add: RequestHandler = async (req, res, next) => {
+  try {
+    // Extract the category data from the request body
+    const newCategory = {
+      name: req.body.name,
+    };
+
+    // Create the category
+    const insertId = await programRepository.create(newCategory);
+
+    // Respond with HTTP 201 (Created) and the ID of the newly inserted item
+    res.status(201).json({ insertId });
+  } catch (err) {
+    // Pass any errors to the error-handling middleware
+    next(err);
+  }
+};
+
+const destroy: RequestHandler = async (req, res, next) => {
+  try {
+    // Delete a specific category based on the provided ID
+    const programId = Number(req.params.id);
+
+    await programRepository.delete(programId);
+
+    // Respond with HTTP 204 (No Content) anyway
+    res.sendStatus(204);
+  } catch (err) {
+    // Pass any errors to the error-handling middleware
+    next(err);
+  }
+};
+
+// Export them to import them somewhere else
+
+export default { browse, read, edit, add, destroy, validate };
